@@ -1,0 +1,266 @@
+{
+  "name": "Atendente de WhatsApp com IA (modelo)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ]
+      },
+      "name": "Gatilho WhatsApp",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        300
+      ],
+      "id": "03e42507-6e86-4ea6-92a2-7e2b3e51dbd5",
+      "webhookId": "5cd28a42-5e06-4adf-aeed-e35e6ff8f86d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mantém só mensagens de clientes (ignora avisos de entregue/lido)\nconst saida = [];\nfor (const item of $input.all()) {\n  const v = item.json;\n  const msg = v.messages && v.messages[0];\n  if (!msg) continue;\n  saida.push({\n    json: {\n      telefone: msg.from,\n      nome: (v.contacts && v.contacts[0] && v.contacts[0].profile && v.contacts[0].profile.name) || '',\n      tipo: msg.type,\n      texto: msg.type === 'text' ? msg.text.body : '',\n      recebida_em: new Date(Number(msg.timestamp) * 1000).toISOString(),\n    },\n  });\n}\nreturn saida;"
+      },
+      "name": "Organizar mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        300
+      ],
+      "id": "4d16bd68-5ec9-4870-9946-03e41959ab57"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b163aa33-4d07-4d19-b287-e01fbbac6af2",
+              "leftValue": "={{ $json.tipo }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "É texto?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        300
+      ],
+      "id": "f7f5ed81-4319-4b00-ae1a-bccf99b99cb7"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.texto }}",
+        "options": {
+          "systemMessage": "=Você é a atendente virtual do Flor de Mandacaru, um salão de beleza no bairro de Fátima, em Fortaleza.\nAgora são {{ $now.setZone('America/Fortaleza').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy 'às' HH:mm\") }}.\nO cliente se chama {{ $('Organizar mensagem').item.json.nome || 'cliente' }}.\n\nFale em português do Brasil, com frases curtas e simpáticas, no máximo um emoji por mensagem.\n\nINFORMAÇÕES DO SALÃO (use só estas; o que não estiver aqui, você não sabe):\n- Endereço: Av. Treze de Maio, 0000, Fátima, Fortaleza-CE\n- Funcionamento: terça a sábado, das 9h às 19h. Domingo e segunda: fechado.\n- Pagamento: Pix, débito e crédito em até 3x.\n- Serviços e valores de referência:\n  Corte feminino R$ 70 · Escova modelada R$ 55 · Coloração a partir de R$ 140 · Hidratação profunda R$ 80\n  Mão R$ 30 · Pé e mão R$ 55 · Design de sobrancelha R$ 40 · Limpeza de pele R$ 120\n\nREGRAS:\n1. Responda só sobre o salão. Para outros assuntos, diga com educação que só pode ajudar com o salão.\n2. Para agendar, pergunte um item por vez: serviço, dia, horário e nome. Só ofereça dias e horários de funcionamento.\n   No fim, repita o pedido completo e diga que a equipe vai confirmar o horário por aqui. Nunca confirme o horário por conta própria.\n3. Se pedirem para falar com uma pessoa, reclamarem ou trouxerem algo que você não sabe resolver, diga que vai chamar alguém da equipe.\n4. Não invente preços, promoções, horários livres nem informações de saúde.\n5. Nunca peça CPF, dados de cartão ou senhas."
+        }
+      },
+      "name": "Atendente IA",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        680,
+        200
+      ],
+      "id": "b13ba283-f76e-4eaf-b9f1-cb2ee35cbbc1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "name": "Modelo OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        600,
+        440
+      ],
+      "id": "dc53cb36-cd23-4d92-aba8-87a2881978b2"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Organizar mensagem').item.json.telefone }}",
+        "contextWindowLength": 10
+      },
+      "name": "Memória da conversa",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        780,
+        440
+      ],
+      "id": "cc8548bd-3fc3-4093-9006-3f6446126fc2"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "COLOQUE_O_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Organizar mensagem').item.json.telefone }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "name": "Responder no WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        200
+      ],
+      "id": "f09d2c0e-579b-4dee-b59f-967a8e2a1c6d"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "COLOQUE_O_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $json.telefone }}",
+        "textBody": "Por enquanto eu só consigo ler mensagens de texto. Pode escrever sua dúvida? 🙂",
+        "additionalFields": {}
+      },
+      "name": "Avisar que só lê texto",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        620
+      ],
+      "id": "47980f9a-2661-4362-a8fa-b944b419c6e1"
+    },
+    {
+      "parameters": {
+        "content": "## Atendente de WhatsApp com IA (modelo)\n\n**Feito com IA (Claude) e revisado por Talles Eduardo.** Projeto de portfólio.\n\nPara usar com um cliente:\n1. Crie as credenciais **WhatsApp Business Cloud** (API oficial da Meta) e **OpenAI**.\n2. Nos dois nós de envio, troque `COLOQUE_O_PHONE_NUMBER_ID` pelo número do negócio.\n3. No nó **Atendente IA**, troque as informações do salão pelas do cliente (endereço, horários, serviços, regras).\n4. Ative o fluxo e teste com o seu próprio número antes de liberar.",
+        "height": 340,
+        "width": 520,
+        "color": 5
+      },
+      "name": "Leia antes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        -100
+      ],
+      "id": "35228ee7-d4b4-4825-b955-9f6c65e02806"
+    },
+    {
+      "parameters": {
+        "content": "### Como a conversa anda\nMensagem chega → só texto segue → a IA responde com as informações do negócio → resposta volta pelo WhatsApp.\nA memória guarda as últimas 10 trocas de cada telefone, para o cliente não precisar repetir.\n\nPróximo passo: registrar os agendamentos numa planilha e avisar o dono.",
+        "height": 220,
+        "width": 420,
+        "color": 7
+      },
+      "name": "Fluxo",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        460,
+        -100
+      ],
+      "id": "90501f13-eb8e-4f80-b73f-06a06f7a858d"
+    }
+  ],
+  "connections": {
+    "Gatilho WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Organizar mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Organizar mensagem": {
+      "main": [
+        [
+          {
+            "node": "É texto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É texto?": {
+      "main": [
+        [
+          {
+            "node": "Atendente IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avisar que só lê texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo OpenAI": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Atendente IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória da conversa": {
+      "ai_memory": [
+        [
+          {
+            "node": "Atendente IA",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atendente IA": {
+      "main": [
+        [
+          {
+            "node": "Responder no WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

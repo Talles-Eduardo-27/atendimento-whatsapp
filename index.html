@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador de atendimento automático no WhatsApp</title>
+<link rel="icon" href="data:,">
+<meta name="description" content="Demonstração de atendimento automático para pequenos negócios de Fortaleza. Projeto de portfólio.">
+<style>
+:root {
+  --fundo: #f3f5f4; --cartao: #ffffff; --texto: #1d2a26; --suave: #5d6b66; --linha: #e2e8e5;
+  --marca: #0f6b5c; --marca-2: #12846f; --cliente: #dff1ff; --bot: #ffffff; --chat: #eef2ef; --aviso: #fff6dc;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--fundo); color: var(--texto); }
+a { color: var(--marca); }
+.topo { max-width: 1100px; margin: 0 auto; padding: 28px 20px 8px; }
+.topo h1 { margin: 0 0 4px; font-size: 1.55rem; }
+.topo p { margin: 0; color: var(--suave); }
+.topo .aviso { font-size: .85rem; margin-top: 6px; }
+.layout { max-width: 1100px; margin: 0 auto; padding: 16px 20px 40px; display: grid; grid-template-columns: 400px 1fr; gap: 24px; align-items: start; }
+
+.nichos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.nichos button { font: inherit; font-size: .88rem; border: 1px solid var(--linha); background: var(--cartao); color: var(--texto); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+.nichos button[aria-pressed="true"] { background: var(--marca); border-color: var(--marca); color: #fff; font-weight: 600; }
+
+.celular { background: #10201c; border-radius: 34px; padding: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.18); }
+.tela { background: var(--chat); border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; height: 640px; }
+.cabeca { background: var(--marca); color: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+.avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.2); display: grid; place-content: center; font-weight: 700; }
+.cabeca strong { display: block; font-size: .98rem; line-height: 1.2; }
+.cabeca span { font-size: .78rem; opacity: .85; }
+.cabeca button { margin-left: auto; font: inherit; font-size: .75rem; color: #fff; background: rgba(255,255,255,.15); border: 0; border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+.mensagens { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 6px; }
+.msg { max-width: 82%; padding: 7px 10px 5px; border-radius: 12px; font-size: .92rem; white-space: pre-wrap; box-shadow: 0 1px 1px rgba(0,0,0,.06); }
+.msg.bot { background: var(--bot); align-self: flex-start; border-top-left-radius: 4px; }
+.msg.cliente { background: var(--cliente); align-self: flex-end; border-top-right-radius: 4px; }
+.msg time { display: block; text-align: right; font-size: .68rem; color: var(--suave); margin-top: 2px; }
+.digitando { align-self: flex-start; background: var(--bot); border-radius: 12px; padding: 8px 12px; font-size: .85rem; color: var(--suave); }
+.sistema { align-self: center; background: var(--aviso); font-size: .75rem; color: #6b5a1d; padding: 4px 10px; border-radius: 8px; text-align: center; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px 0; background: var(--chat); }
+.chips button { flex: none; font: inherit; font-size: .8rem; border: 1px solid var(--marca-2); color: var(--marca); background: #fff; border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.entrada { display: flex; gap: 8px; padding: 10px; background: var(--chat); }
+.entrada input { flex: 1; font: inherit; border: 0; border-radius: 999px; padding: 10px 14px; outline: none; background: #fff; }
+.entrada button { font: inherit; border: 0; border-radius: 50%; width: 42px; height: 42px; background: var(--marca); color: #fff; cursor: pointer; font-size: 1.1rem; }
+
+.lado { display: grid; gap: 16px; }
+.cartao { background: var(--cartao); border: 1px solid var(--linha); border-radius: 16px; padding: 18px; }
+.cartao h2 { margin: 0 0 4px; font-size: 1.05rem; }
+.cartao > p { margin: 0 0 12px; color: var(--suave); font-size: .88rem; }
+.numeros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.numeros div { background: var(--fundo); border-radius: 12px; padding: 10px 12px; }
+.numeros strong { display: block; font-size: 1.4rem; }
+.numeros span { font-size: .75rem; color: var(--suave); }
+.pedidos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pedidos li { border: 1px solid var(--linha); border-radius: 12px; padding: 10px 12px; font-size: .88rem; }
+.pedidos li b { display: block; }
+.pedidos .tag { display: inline-block; font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--aviso); color: #6b5a1d; margin-top: 4px; }
+.pedidos .tag.humano { background: #ffe4e0; color: #8a2c1d; }
+.vazio { color: var(--suave); font-size: .88rem; }
+.passos-reais { margin: 0; padding-left: 18px; color: var(--suave); font-size: .9rem; }
+.passos-reais li { margin: 4px 0; }
+.rodape { max-width: 1100px; margin: 0 auto; padding: 0 20px 40px; color: var(--suave); font-size: .82rem; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .celular { max-width: 420px; width: 100%; margin: 0 auto; }
+  .tela { height: 560px; }
+  .numeros { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<header class="topo">
+  <h1>Atendimento automático no WhatsApp</h1>
+  <p>Escolha um tipo de negócio e converse como se fosse um cliente. Ao lado, veja o que chega para o dono.</p>
+  <p class="aviso">Demonstração com negócios fictícios. Projeto de portfólio feito com IA (Claude) e revisado por
+    <a href="https://github.com/Talles-Eduardo-27">Talles Eduardo</a> · <a href="https://github.com/Talles-Eduardo-27/atendimento-whatsapp">código e fluxo do n8n</a></p>
+</header>
+
+<main class="layout">
+  <section aria-label="Conversa">
+    <div class="nichos" id="nichos" role="group" aria-label="Tipo de negócio"></div>
+    <div class="celular">
+      <div class="tela">
+        <div class="cabeca">
+          <div class="avatar" id="avatar">F</div>
+          <div><strong id="nome-negocio"></strong><span id="status">responde na hora</span></div>
+          <button type="button" id="reiniciar">Reiniciar</button>
+        </div>
+        <div class="mensagens" id="mensagens" aria-live="polite"></div>
+        <div class="chips" id="chips"></div>
+        <form class="entrada" id="form" autocomplete="off">
+          <input id="texto" placeholder="Escreva uma mensagem" aria-label="Mensagem" maxlength="300">
+          <button type="submit" aria-label="Enviar">➤</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <aside class="lado">
+    <section class="cartao">
+      <h2>O que chega para o dono</h2>
+      <p>Cada pedido fica anotado com tudo o que a equipe precisa para confirmar.</p>
+      <div class="numeros">
+        <div><strong id="n-respostas">0</strong><span>respostas automáticas</span></div>
+        <div><strong id="n-pedidos">0</strong><span>pedidos anotados</span></div>
+        <div><strong id="n-humano">0</strong><span>pediram uma pessoa</span></div>
+        <div><strong id="n-tempo">0 s</strong><span>tempo de resposta</span></div>
+      </div>
+      <ul class="pedidos" id="pedidos"><li class="vazio">Nenhum pedido ainda. Tente marcar um horário na conversa.</li></ul>
+    </section>
+    <section class="cartao">
+      <h2>Como funciona de verdade</h2>
+      <ol class="passos-reais">
+        <li>O cliente manda mensagem para o número do negócio, pela <b>API oficial do WhatsApp</b> (Meta).</li>
+        <li>Um fluxo no <b>n8n</b> recebe a mensagem e passa para uma <b>IA</b> com as informações do negócio: preços, horários, endereço e regras.</li>
+        <li>A IA responde em segundos, anota pedidos e chama uma pessoa quando precisa.</li>
+        <li>Nada é confirmado sozinho: a equipe confirma os horários.</li>
+      </ol>
+      <p style="margin:10px 0 0;font-size:.82rem;color:var(--suave)">Nesta demonstração as respostas seguem regras simples, para funcionar sem internet e sem custo. O fluxo do n8n está no repositório.</p>
+    </section>
+  </aside>
+</main>
+<p class="rodape">Os negócios, endereços e valores são fictícios. Sites de exemplo: <span id="sites"></span></p>
+
+<script>
+"use strict";
+const NEGOCIOS = {"salao": {"rotulo": "Salão de beleza", "nome": "Flor de Mandacaru", "endereco": "Av. Treze de Maio, 0000 · Fátima, Fortaleza-CE", "horarioTexto": "terça a sábado, das 9h às 19h", "dias": [2, 3, 4, 5, 6], "abre": 9, "fecha": 19, "sabado": null, "horarios": ["09:00", "10:30", "13:00", "14:30", "16:00", "17:30"], "pagamento": "Pix, débito e crédito em até 3x", "itens": [{"nome": "Corte feminino", "preco": 70, "desc": "Corte com lavagem e finalização."}, {"nome": "Escova modelada", "preco": 55, "desc": "Escova lisa ou com movimento."}, {"nome": "Coloração", "preco": 140, "desc": "Raiz ou global, com tinta profissional."}, {"nome": "Hidratação profunda", "preco": 80, "desc": "Tratamento com máscara e ampola."}, {"nome": "Mão", "preco": 30, "desc": "Cutilagem e esmaltação."}, {"nome": "Pé e mão", "preco": 55, "desc": "O combo mais pedido da casa."}, {"nome": "Design de sobrancelha", "preco": 40, "desc": "Com henna opcional."}, {"nome": "Limpeza de pele", "preco": 120, "desc": "Higienização e hidratação."}], "acao": "agendar", "passos": ["servico", "dia", "hora", "nome"], "rotuloItem": "serviço", "site": "https://talles-eduardo-27.github.io/landing-salao/"}, "clinica": {"rotulo": "Clínica odontológica", "nome": "Clínica Sorriso Iracema", "endereco": "Rua Silva Paulet, 0000 · Aldeota, Fortaleza-CE", "horarioTexto": "segunda a sexta, das 8h às 20h; sábado, das 8h às 12h", "dias": [1, 2, 3, 4, 5], "abre": 8, "fecha": 20, "sabado": [8, 12], "horarios": ["08:00", "09:30", "11:00", "14:00", "16:00", "18:30"], "pagamento": "Pix, débito e crédito em até 3x", "itens": [{"nome": "Avaliação", "preco": 80, "desc": "Exame clínico e plano de tratamento."}, {"nome": "Limpeza", "preco": 150, "desc": "Profilaxia e remoção de tártaro."}, {"nome": "Clareamento", "preco": 690, "desc": "Em consultório ou caseiro, com moldeira."}, {"nome": "Faceta em resina", "preco": 350, "desc": "Por dente, ajuste de forma e cor."}, {"nome": "Restauração", "preco": 180, "desc": "Resina na cor do dente."}, {"nome": "Manutenção de aparelho", "preco": 120, "desc": "Consulta mensal do ortodôntico."}, {"nome": "Urgência", "preco": 150, "desc": "Dor ou quebra: atendimento no mesmo dia."}], "acao": "marcar uma avaliação", "passos": ["servico", "dia", "hora", "nome"], "rotuloItem": "serviço", "site": "https://talles-eduardo-27.github.io/landing-clinica/"}, "academia": {"rotulo": "Academia", "nome": "Arena Fit Messejana", "endereco": "Av. Frei Cirilo, 0000 · Messejana, Fortaleza-CE", "horarioTexto": "segunda a sexta, das 5h às 23h; sábado, das 8h às 14h", "dias": [1, 2, 3, 4, 5], "abre": 5, "fecha": 23, "sabado": [8, 14], "horarios": ["06:00", "07:00", "12:00", "18:00", "19:00", "20:00"], "pagamento": "Pix, débito, crédito ou recorrente no cartão", "itens": [{"nome": "Mensal", "preco": 99, "desc": "Musculação livre em todos os horários."}, {"nome": "Trimestral", "preco": 267, "desc": "Mensalidade de R$ 89 no plano."}, {"nome": "Semestral", "preco": 474, "desc": "Mensalidade de R$ 79 no plano."}, {"nome": "Diária", "preco": 20, "desc": "Para quem está de passagem."}, {"nome": "Musculação", "preco": 0, "desc": "Treino montado e revisado todo mês."}, {"nome": "Funcional", "preco": 0, "desc": "Turmas de 45 min, até 12 alunos."}, {"nome": "Spinning", "preco": 0, "desc": "Aulas às 6h, 12h e 19h."}, {"nome": "Ritmos", "preco": 0, "desc": "Dança aeróbica às terças e quintas."}], "acao": "agendar uma aula grátis", "passos": ["servico", "dia", "hora", "nome"], "rotuloItem": "modalidade ou plano", "site": "https://talles-eduardo-27.github.io/landing-academia/"}, "petshop": {"rotulo": "Pet shop", "nome": "Patinhas do Benfica", "endereco": "Av. da Universidade, 0000 · Benfica, Fortaleza-CE", "horarioTexto": "segunda a sábado, das 8h às 18h", "dias": [1, 2, 3, 4, 5, 6], "abre": 8, "fecha": 18, "sabado": null, "horarios": ["08:00", "09:30", "11:00", "13:30", "15:00", "16:30"], "pagamento": "Pix, débito e crédito em até 3x", "itens": [{"nome": "Banho porte P", "preco": 45, "desc": "Até 10 kg, com secagem e perfume."}, {"nome": "Banho porte M", "preco": 60, "desc": "De 10 a 25 kg."}, {"nome": "Banho porte G", "preco": 80, "desc": "Acima de 25 kg."}, {"nome": "Tosa higiênica", "preco": 30, "desc": "Patas, barriga e região íntima."}, {"nome": "Tosa completa", "preco": 90, "desc": "Na máquina ou na tesoura."}, {"nome": "Hidratação de pelos", "preco": 35, "desc": "Para pelo ressecado ou com nós."}, {"nome": "Táxi dog", "preco": 15, "desc": "Busca e entrega no Benfica."}], "acao": "agendar banho ou tosa", "passos": ["servico", "dia", "hora", "nome", "pet"], "rotuloItem": "serviço", "site": "https://talles-eduardo-27.github.io/landing-petshop/"}, "restaurante": {"rotulo": "Restaurante", "nome": "Maré Cheia", "endereco": "Av. Beira-Mar, 0000 · Praia de Iracema, Fortaleza-CE", "horarioTexto": "todos os dias, das 11h às 23h", "dias": [0, 1, 2, 3, 4, 5, 6], "abre": 11, "fecha": 23, "sabado": null, "horarios": ["12:00", "13:00", "19:00", "20:00", "21:00"], "pagamento": "Pix, débito e crédito", "itens": [{"nome": "Peixada cearense", "preco": 89, "desc": "Peixe do dia no caldo com legumes, pirão e arroz."}, {"nome": "Camarão na moranga", "preco": 112, "desc": "Camarão cremoso servido dentro da abóbora assada."}, {"nome": "Caranguejada", "preco": 78, "desc": "Seis caranguejos no caldo temperado, com farofa."}, {"nome": "Baião de dois", "preco": 54, "desc": "Arroz, feijão-de-corda, queijo coalho e nata."}, {"nome": "Carne de sol na brasa", "preco": 92, "desc": "Com macaxeira frita, paçoca e manteiga da terra."}, {"nome": "Escondidinho de charque", "preco": 48, "desc": "Purê de macaxeira gratinado com queijo coalho."}, {"nome": "Água de coco", "preco": 9, "desc": "Gelada, direto do coco."}, {"nome": "Suco de cajá", "preco": 12, "desc": "Fruta da estação batida na hora. 500 ml."}], "acao": "reservar uma mesa", "passos": ["pessoas", "dia", "hora", "nome"], "rotuloItem": "prato", "site": "https://talles-eduardo-27.github.io/landing-restaurante/"}};
+const DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+const real = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9: ]/g, " ").replace(/\s+/g, " ").trim();
+
+let N = null;               // negócio atual
+let conversa = null;        // estado da conversa
+const painel = { respostas: 0, pedidos: [], humano: 0, tempos: [] };
+
+// ---------- horário de Fortaleza ----------
+function agora() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/Fortaleza", weekday: "short", hour: "numeric", minute: "numeric", hour12: false, year: "numeric", month: "2-digit", day: "2-digit" })
+    .formatToParts(new Date()).map((x) => [x.type, x.value]));
+  return { dia: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(p.weekday), hora: Number(p.hour) % 24, minuto: Number(p.minute), data: `${p.year}-${p.month}-${p.day}` };
+}
+function janela(dia) {
+  if (dia === 6 && N.sabado) return N.sabado;
+  return N.dias.includes(dia) ? [N.abre, N.fecha] : null;
+}
+function abertoAgora() {
+  const a = agora(), j = janela(a.dia);
+  return !!j && a.hora >= j[0] && a.hora < j[1];
+}
+function proximosDias(qtd = 5) {
+  const a = agora(), base = new Date(a.data + "T12:00:00"), out = [];
+  for (let i = 0; out.length < qtd && i < 14; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i);
+    const j = janela(d.getDay());
+    if (!j) continue;
+    const livres = N.horarios.filter((h) => { const hh = Number(h.slice(0, 2)); return hh >= j[0] && hh < j[1] && (i > 0 || hh > a.hora); });
+    if (!livres.length) continue;
+    const rot = (i === 0 ? "hoje" : i === 1 ? "amanhã" : DIAS[d.getDay()]) + " (" + d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + ")";
+    out.push({ rot, livres, semana: DIAS[d.getDay()] });
+  }
+  return out;
+}
+
+// ---------- tela ----------
+const caixa = document.getElementById("mensagens");
+const chipsEl = document.getElementById("chips");
+function hora() { const a = agora(); return String(a.hora).padStart(2, "0") + ":" + String(a.minuto).padStart(2, "0"); }
+function bolha(texto, quem) {
+  const m = document.createElement("div"); m.className = "msg " + quem;
+  m.textContent = texto;
+  const t = document.createElement("time"); t.textContent = hora(); m.appendChild(t);
+  caixa.appendChild(m); caixa.scrollTop = caixa.scrollHeight;
+}
+function sistema(texto) {
+  const m = document.createElement("div"); m.className = "sistema"; m.textContent = texto;
+  caixa.appendChild(m); caixa.scrollTop = caixa.scrollHeight;
+}
+function chips(lista) {
+  chipsEl.replaceChildren();
+  for (const c of lista) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = c;
+    b.addEventListener("click", () => cliente(c));
+    chipsEl.appendChild(b);
+  }
+}
+let fila = Promise.resolve();
+function bot(textos, proximosChips = null) {
+  const lista = [].concat(textos);
+  const inicio = performance.now();
+  fila = fila.then(async () => {
+    for (const t of lista) {
+      const dig = document.createElement("div"); dig.className = "digitando"; dig.textContent = "digitando…";
+      caixa.appendChild(dig); caixa.scrollTop = caixa.scrollHeight;
+      await new Promise((r) => setTimeout(r, Math.min(1100, 350 + t.length * 6)));
+      dig.remove(); bolha(t, "bot");
+      painel.respostas++;
+    }
+    painel.tempos.push((performance.now() - inicio) / 1000);
+    if (proximosChips) chips(proximosChips);
+    atualizaPainel();
+  });
+}
+
+// ---------- painel do dono ----------
+function atualizaPainel() {
+  document.getElementById("n-respostas").textContent = painel.respostas;
+  document.getElementById("n-pedidos").textContent = painel.pedidos.filter((p) => p.tipo === "pedido").length;
+  document.getElementById("n-humano").textContent = painel.humano;
+  const media = painel.tempos.length ? painel.tempos.reduce((a, b) => a + b, 0) / painel.tempos.length : 0;
+  document.getElementById("n-tempo").textContent = Math.max(1, Math.round(media)) + " s";
+  const ul = document.getElementById("pedidos"); ul.replaceChildren();
+  if (!painel.pedidos.length) {
+    const li = document.createElement("li"); li.className = "vazio"; li.textContent = "Nenhum pedido ainda. Tente marcar um horário na conversa."; ul.appendChild(li); return;
+  }
+  for (const p of [...painel.pedidos].reverse()) {
+    const li = document.createElement("li");
+    const b = document.createElement("b"); b.textContent = p.titulo;
+    const d = document.createElement("div"); d.textContent = p.detalhe;
+    const t = document.createElement("span"); t.className = "tag" + (p.tipo === "humano" ? " humano" : ""); t.textContent = p.status;
+    li.append(b, d, t); ul.appendChild(li);
+  }
+}
+
+// ---------- respostas ----------
+function menu() {
+  return ["Ver preços", N.acao[0].toUpperCase() + N.acao.slice(1), "Endereço e horário", "Falar com uma pessoa"];
+}
+function saudacao() {
+  const t = [`Olá! Aqui é o atendimento do ${N.nome} 👋\nPosso te ajudar com:\n1. Ver preços\n2. ${N.acao[0].toUpperCase() + N.acao.slice(1)}\n3. Endereço e horário\n4. Falar com uma pessoa`];
+  if (!abertoAgora()) t.push(`Estamos fechados agora (funcionamos ${N.horarioTexto}), mas eu já anoto seu pedido para a equipe.`);
+  bot(t, menu());
+}
+function listaPrecos() {
+  const linhas = N.itens.map((i) => `• ${i.nome}: ${i.preco ? real(i.preco) : "incluso no plano"}`);
+  bot([`Nossos valores:\n${linhas.join("\n")}`, `Quer ${N.acao}?`], ["Sim, quero", "Endereço e horário", "Falar com uma pessoa"]);
+}
+function enderecoHorario() {
+  bot([`📍 ${N.endereco}\n🕒 Funcionamos ${N.horarioTexto}.\n💳 ${N.pagamento}.`], menu());
+}
+function humano() {
+  painel.humano++;
+  painel.pedidos.push({ tipo: "humano", titulo: "Cliente pediu para falar com uma pessoa", detalhe: "Conversa marcada para a equipe responder.", status: "responder" });
+  bot(["Certo! Já chamei alguém da equipe para continuar com você por aqui. Se quiser, já adianta o assunto 🙂"], ["Ver preços", "Endereço e horário"]);
+}
+
+// passos do pedido
+function perguntaPasso() {
+  const passo = N.passos[conversa.passo];
+  if (passo === "servico") {
+    const lista = N.itens.map((i, k) => `${k + 1}. ${i.nome}`).join("\n");
+    bot([`Qual ${N.rotuloItem}? Responda com o número:\n${lista}`], N.itens.slice(0, 6).map((i) => i.nome));
+  } else if (passo === "pessoas") {
+    bot(["Mesa para quantas pessoas?"], ["2", "4", "6"]);
+  } else if (passo === "dia") {
+    conversa.opcoesDia = proximosDias();
+    bot([`Para qual dia?\n${conversa.opcoesDia.map((d, k) => `${k + 1}. ${d.rot}`).join("\n")}`], conversa.opcoesDia.map((d) => d.rot.split(" (")[0]));
+  } else if (passo === "hora") {
+    bot([`Horários livres ${conversa.dados.dia.rot}:\n${conversa.dados.dia.livres.join(" · ")}`], conversa.dados.dia.livres);
+  } else if (passo === "nome") {
+    bot(["Pra finalizar, qual o seu nome?"], []);
+  } else if (passo === "pet") {
+    bot(["E qual o nome do seu pet? 🐶"], []);
+  }
+}
+function resumo() {
+  const d = conversa.dados;
+  const item = d.servico ? d.servico.nome : `mesa para ${d.pessoas} pessoas`;
+  return `${item} · ${d.dia.rot} às ${d.hora}` + (d.pet ? ` · pet: ${d.pet}` : "") + ` · ${d.nome}`;
+}
+function trataPasso(txt, n) {
+  const passo = N.passos[conversa.passo];
+  const num = Number((n.match(/\d+/) || [])[0]);
+  if (passo === "servico") {
+    let it = num >= 1 && num <= N.itens.length ? N.itens[num - 1] : null;
+    if (!it) it = N.itens.find((i) => norm(i.nome) === n) || N.itens.find((i) => n.length > 3 && norm(i.nome).includes(n)) || acharItem(n);
+    if (!it) return bot([`Não achei esse ${N.rotuloItem}. Pode mandar o número da lista?`]);
+    conversa.dados.servico = it;
+  } else if (passo === "pessoas") {
+    if (!(num >= 1 && num <= 30)) return bot(["Me diz só o número de pessoas, por favor (ex.: 4)."]);
+    conversa.dados.pessoas = num;
+  } else if (passo === "dia") {
+    const ops = conversa.opcoesDia;
+    let d = num >= 1 && num <= ops.length && !n.includes("/") ? ops[num - 1] : null;
+    if (!d) d = ops.find((o) => n.includes(norm(o.rot.split(" (")[0])) || n.includes(norm(o.semana)));
+    if (!d) return bot(["Esse dia não está na lista. Pode escolher um dos números?"]);
+    conversa.dados.dia = d;
+  } else if (passo === "hora") {
+    const m = n.match(/(\d{1,2})(?:[:h ]?(\d{2}))?/);
+    const alvo = m ? m[1].padStart(2, "0") + ":" + (m[2] || "00") : "";
+    const h = conversa.dados.dia.livres.find((x) => x === alvo) || conversa.dados.dia.livres.find((x) => m && x.startsWith(m[1].padStart(2, "0")));
+    if (!h) return bot([`Esse horário não está livre. Pode escolher um destes: ${conversa.dados.dia.livres.join(", ")}`]);
+    conversa.dados.hora = h;
+  } else if (passo === "nome") {
+    if (txt.trim().length < 2) return bot(["Pode me dizer seu nome?"]);
+    conversa.dados.nome = txt.trim().slice(0, 40);
+  } else if (passo === "pet") {
+    if (txt.trim().length < 2) return bot(["Qual o nome do pet?"]);
+    conversa.dados.pet = txt.trim().slice(0, 30);
+  }
+  conversa.passo++;
+  if (conversa.passo < N.passos.length) return perguntaPasso();
+  conversa.modo = "confirmar";
+  bot([`Confere?\n${resumo()}`, "Posso enviar para a equipe confirmar?"], ["Sim", "Não"]);
+}
+function acharItens(n) {
+  const palavras = n.split(" ").filter((p) => p.length >= 4);
+  return N.itens.filter((i) => palavras.some((p) => norm(i.nome).split(" ").some((w) => w.length >= 4 && (w.startsWith(p) || p.startsWith(w)))));
+}
+function acharItem(n) {
+  const lista = acharItens(n);
+  return lista.length === 1 ? lista[0] : null;
+}
+
+const TEM = (n, lista) => lista.some((k) => n.includes(k));
+const PALAVRA = (n, lista) => n.split(" ").some((w) => lista.includes(w));
+function cliente(texto) {
+  const txt = texto.trim();
+  if (!txt) return;
+  bolha(txt, "cliente");
+  chips([]);
+  const n = norm(txt);
+
+  if (TEM(n, ["menu", "cancelar", "voltar", "inicio"])) { conversa = { modo: "menu" }; return bot(["Sem problemas. Posso ajudar com mais alguma coisa?"], menu()); }
+  if (TEM(n, ["atendente", "falar com uma pessoa", "falar com alguem", "humano", "gerente", "reclam"]) || PALAVRA(n, ["dono", "dona"])) { conversa = { modo: "menu" }; return humano(); }
+
+  if (conversa.modo === "pedido") return trataPasso(txt, n);
+  if (conversa.modo === "confirmar") {
+    if (PALAVRA(n, ["sim", "pode", "isso", "confirmo", "ok", "certo", "s", "claro", "manda"]) && !PALAVRA(n, ["nao", "n"])) {
+      const d = conversa.dados;
+      painel.pedidos.push({ tipo: "pedido", titulo: `${d.nome} · ${d.servico ? d.servico.nome : "Reserva de mesa"}`, detalhe: resumo(), status: "aguardando confirmação" });
+      conversa = { modo: "menu" };
+      return bot(["Pronto! Enviei seu pedido para a equipe ✅ A confirmação chega por aqui. Posso ajudar com mais alguma coisa?"], ["Ver preços", "Endereço e horário"]);
+    }
+    conversa = { modo: "menu" };
+    return bot(["Tudo bem, não enviei. Quer tentar outro dia ou horário?"], menu());
+  }
+
+  // menu e perguntas soltas
+  if (n === "1") return listaPrecos();
+  if (n === "2" || TEM(n, ["agendar", "agenda", "marcar", "reserv", "aula gratis", "experimental", "sim quero", "quero sim"]) || (n === "sim")) {
+    conversa = { modo: "pedido", passo: 0, dados: {} };
+    const item = acharItem(n);
+    if (item && N.passos[0] === "servico") { conversa.dados.servico = item; conversa.passo = 1; bot([`Ótimo, ${item.nome}!`]); }
+    return perguntaPasso();
+  }
+  if (n === "3" || TEM(n, ["endereco", "onde fica", "localiza", "como chego", "como chegar", "fica onde"])) return enderecoHorario();
+  if (n === "4") return humano();
+  if (TEM(n, ["abre", "fecha", "funciona", "aberto", "que horas", "horario"])) {
+    return bot([`Funcionamos ${N.horarioTexto}. ${abertoAgora() ? "Estamos abertos agora!" : "Agora estamos fechados."}`], menu());
+  }
+  if (TEM(n, ["pix", "cartao", "parcel", "pagamento", "dinheiro", "credito", "debito"])) return bot([`Aceitamos ${N.pagamento}.`], menu());
+  const achados = acharItens(n);
+  if (achados.length === 1) {
+    const item = achados[0];
+    return bot([`${item.nome}: ${item.preco ? real(item.preco) : "incluso no plano"}.\n${item.desc}`, `Quer ${N.acao}?`], ["Sim, quero", "Ver preços"]);
+  }
+  if (achados.length > 1) {
+    return bot([achados.map((i) => `• ${i.nome}: ${i.preco ? real(i.preco) : "incluso no plano"}`).join("\n"), `Quer ${N.acao}?`], ["Sim, quero", "Ver preços"]);
+  }
+  if (TEM(n, ["preco", "valor", "quanto", "tabela", "servico", "cardapio", "plano", "custa"])) return listaPrecos();
+  if (TEM(n, ["obrigad", "valeu", "show", "perfeito", "beleza"])) return bot(["Por nada! Qualquer coisa é só chamar 😊"], menu());
+  if (PALAVRA(n, ["oi", "oie", "ola", "opa", "eai", "salve"]) || TEM(n, ["bom dia", "boa tarde", "boa noite", "e ai"])) return saudacao();
+  bot(["Desculpa, não entendi 🙈 Posso te ajudar com uma destas opções:"], menu());
+}
+
+// ---------- troca de negócio ----------
+function escolhe(chave) {
+  N = NEGOCIOS[chave];
+  conversa = { modo: "menu" };
+  painel.respostas = 0; painel.pedidos = []; painel.humano = 0; painel.tempos = [];
+  atualizaPainel();
+  document.querySelectorAll("#nichos button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.k === chave));
+  document.getElementById("nome-negocio").textContent = N.nome;
+  document.getElementById("avatar").textContent = N.nome[0];
+  document.getElementById("status").textContent = abertoAgora() ? "responde na hora · aberto agora" : "responde na hora · fechado agora";
+  caixa.replaceChildren();
+  fila = Promise.resolve();
+  sistema("Demonstração: as mensagens não saem daqui.");
+  chips(["Oi!", "Quanto custa?", "Quero " + N.acao, "Onde fica?"]);
+}
+
+const nichos = document.getElementById("nichos");
+for (const [k, v] of Object.entries(NEGOCIOS)) {
+  const b = document.createElement("button"); b.type = "button"; b.dataset.k = k; b.textContent = v.rotulo;
+  b.addEventListener("click", () => escolhe(k));
+  nichos.appendChild(b);
+}
+const sites = document.getElementById("sites");
+Object.values(NEGOCIOS).forEach((v, i) => {
+  const a = document.createElement("a"); a.href = v.site; a.textContent = v.nome;
+  if (i) sites.appendChild(document.createTextNode(" · "));
+  sites.appendChild(a);
+});
+document.getElementById("form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const inp = document.getElementById("texto");
+  cliente(inp.value); inp.value = "";
+});
+document.getElementById("reiniciar").addEventListener("click", () => escolhe(Object.keys(NEGOCIOS).find((k) => NEGOCIOS[k] === N)));
+escolhe("salao");
+</script>
+</body>
+</html>
