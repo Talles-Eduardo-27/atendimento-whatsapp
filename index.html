@@ -106,7 +106,7 @@ a { color: var(--marca); }
         <div><strong id="n-respostas">0</strong><span>respostas automáticas</span></div>
         <div><strong id="n-pedidos">0</strong><span>pedidos anotados</span></div>
         <div><strong id="n-humano">0</strong><span>pediram uma pessoa</span></div>
-        <div><strong id="n-tempo">0 s</strong><span>tempo de resposta</span></div>
+        <div><strong id="n-tempo">—</strong><span>tempo de resposta</span></div>
       </div>
       <ul class="pedidos" id="pedidos"><li class="vazio">Nenhum pedido ainda. Tente marcar um horário na conversa.</li></ul>
     </section>
@@ -209,7 +209,7 @@ function atualizaPainel() {
   document.getElementById("n-pedidos").textContent = painel.pedidos.filter((p) => p.tipo === "pedido").length;
   document.getElementById("n-humano").textContent = painel.humano;
   const media = painel.tempos.length ? painel.tempos.reduce((a, b) => a + b, 0) / painel.tempos.length : 0;
-  document.getElementById("n-tempo").textContent = Math.max(1, Math.round(media)) + " s";
+  document.getElementById("n-tempo").textContent = painel.tempos.length ? Math.max(1, Math.round(media)) + " s" : "—";
   const ul = document.getElementById("pedidos"); ul.replaceChildren();
   if (!painel.pedidos.length) {
     const li = document.createElement("li"); li.className = "vazio"; li.textContent = "Nenhum pedido ainda. Tente marcar um horário na conversa."; ul.appendChild(li); return;
